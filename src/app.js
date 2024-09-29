@@ -2,10 +2,16 @@ const express = require('express');
 const connectDB = require("./config/database")
 const app = express();
 const User = require('./models/user')
-const {validationSignUp} = require('../utils/validation')
-const {bcrypt} = require('bcrypt')
+const {validationSignUp} = require("./utils/validation")
+const bcrypt = require('bcrypt');
+const validator = require('validator')
+const cookieParser = require('cookie-parser')
+const jwt = require('jsonwebtoken')
+const {userAuth} = require("./middlewares/auth");
 
 app.use(express.json());
+app.use(cookieParser())
+
 app.post('/signup', async (req, res) => {
     const {firstName, lastName, emailID, password} = req.body;
     try {
@@ -37,8 +43,16 @@ app.post('/login', async (req, res) => {
         if(!user){
             throw new Error("Invalid credentials");
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password)
+        const isPasswordValid = await user.validatePassword(password)
+
         if(isPasswordValid){
+            const token = await user.getJWT()
+
+            res.cookie("token", token, {
+                expires: new Date(Date.now() + 8 * 86400000), // 24 hours
+                httpOnly: true,
+            })
+
             res.send('Logged in successfully')
         }else{
             throw new Error("Invalid credentials")
@@ -49,65 +63,22 @@ app.post('/login', async (req, res) => {
     }
 })
 
-app.get('/user', async (req, res) => {
-        const userEmail = req.body.emailID;
+app.get('/profile',userAuth, async (req, res) => {
+   try{ 
+   const user = req.user;
+   res.send(user);
 
-        try {
-            const users = await User.find({ emailID: userEmail})
-           if(users.length===0){
-            res.status(404).send("User not found")
-           }else{
-            res.send(users);
-           }
-        } catch (error) {
-            res.status(404).send("something went wrong")
-        }
-})
-
-
-app.get('/feed', async (req, res) => {
-   try {
-    const users = await User.find({});
-    res.send(users);
    } catch (error) {
     res.status(404).send("something went wrong")
 }
+
 })
 
-app.patch('/user/:userID', async (req, res) => {
-    const userID = req.params.userID;
-    const data = req.body;
-
-   
-    try {
-        const Allowed = [ "photoURL", "about", "gender","age", "skills"]
-        const isAllowed = Object.keys(data).every((k) => Allowed.includes(k));
-    
-        if(!isAllowed){
-          throw new Error("Update not allowed");
-        }
-        if(data?.skills.length >10){
-            throw new Error("Skills array should not exceed 10 elements");
-        }
-        const users = await User.findByIdAndUpdate(userID, data, {
-            returnDocument: "after",
-            runValidators: true,
-        })
-        res.send(users);
-    } catch (error) {
-        res.status(404).send("UPDATE FAILED!!" + error.message);
-    }
+app.post('/sendConnectionRequest',userAuth ,async(req, res) => {
+    const user = req.user;
+    res.send(user.firstName + " sent a connection request")
 })
 
-app.delete('/user', async (req, res) => {
-    const userID = req.body.userID;
-    try {
-        const user = await User.findByIdAndDelete(userID);
-        res.send("User deleted");
-    }  catch (error) {
-        res.status(404).send("something went wrong")
-}
-})
 
 connectDB()
 .then(() => {
