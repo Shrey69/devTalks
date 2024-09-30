@@ -42,11 +42,15 @@ const userSchema = mongoose.Schema(
 },
     gender: {
         type: String,
-        validate(val){
-            if(!["male", "female", "others"].includes(val)){
-                throw new Error("Invalid");
-            }
-        }
+        enum: {
+            values: ["male", "female", "others"],
+            message: "{VALUE} is not a valid gender",
+        },
+        // validate(val){
+        //     if(!["male", "female", "others"].includes(val)){
+        //         throw new Error("Invalid");
+        //     }
+        // }
     },
     age: {
         type: Number,
@@ -68,6 +72,7 @@ const userSchema = mongoose.Schema(
     timestamp: true,
 },)
 
+userSchema.index({firstName:1, lastName:1})
 userSchema.methods.getJWT = async function(){
     const user = this;
     const token = jwt.sign({_id: user._id}, "El@Camino$78", {expiresIn: "1d"})
