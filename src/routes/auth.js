@@ -19,8 +19,14 @@ authRouter.post('/signup', async (req, res) => {
         password: hashedPassword,
     })
    
-        await user.save()
-    res.send('User registered successfully')
+      const saved =  await user.save()
+      const token = await saved.getJWT()
+
+      res.cookie("token", token, {
+          expires: new Date(Date.now() + 8 * 86400000), // 24 hours
+          httpOnly: true,
+      })
+    res.json({message:'User registered successfully', data:saved})
     } catch (error) {
         res.status(400).send(error.message)
     }
@@ -46,13 +52,14 @@ authRouter.post('/login', async (req, res) => {
                 httpOnly: true,
             })
 
-            res.send('Logged in successfully')
+            res.send(user)
         }else{
-            throw new Error("Invalid credentials")
+            throw new Error("ERROR: Invalid credentials")
         }
 
     } catch (error) {
         res.status(400).send(error.message)
+        
     }
 })
 
