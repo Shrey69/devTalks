@@ -10,9 +10,9 @@ const profileRouter = require("./routes/profile.js")
 const requestRouter = require("./routes/requests.js");
 const userRouter = require('./routes/user.js');
 const cors = require("cors");
-const port = process.env.PORT || 3000 ;
+const port = process.env.PORT  ;
 app.use(cors({
-    origin: process.env.WEB_URL || "http://localhost:5173",
+    origin: process.env.WEB_URL,
     credentials: true
 }))
 app.use(express.json());
